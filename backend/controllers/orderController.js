@@ -160,15 +160,28 @@ exports.getOrders = async (req, res) => {
                 OR cc.name LIKE ?
                 OR CAST(o.id AS CHAR) LIKE ?
                 OR EXISTS (SELECT 1 FROM order_files f2 WHERE f2.order_id = o.id AND f2.file_name LIKE ?)
-                OR EXISTS (
-                    SELECT 1 FROM order_documents_link odl2
-                    INNER JOIN documents d2 ON odl2.document_id = d2.id
-                    WHERE odl2.order_id = o.id
-                    AND (d2.file_name LIKE ? OR d2.description LIKE ?)
-                )
+                OR d.file_name LIKE ?
+                OR d.description LIKE ?
                 ${idClause}
             )`);
-            params.push(s, s, s, s, s, s, s, s, s, s, s, s, s, s, ...idParam);
+
+            params.push(
+                s, // item_description
+                s, // part_number
+                s, // requester_name
+                s, // notes
+                s, // category
+                s, // status
+                s, // building
+                s, // supplier name
+                s, // cost center code
+                s, // cost center name
+                s, // order id as string
+                s, // attached file name
+                s, // document file_name
+                s, // document description
+                ...idParam
+            );
         }
 
         if (conditions.length > 0) {
