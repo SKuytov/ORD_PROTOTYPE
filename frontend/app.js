@@ -381,8 +381,12 @@ function applyFilters() {
         if (filterState.search) {
             const term = filterState.search.toLowerCase();
 
-            // Build file names string from files array
-            const fileNames = (order.files || []).map(f => f.name || '').join(' ');
+            // Build file names string from files array (classic attachments)
+            const fileNames = (order.files || []).map(f => f.name || f.file_name || '').join(' ');
+            
+            // ⭐ NEW: Build document names + descriptions string from documents array (linked docs)
+            const documentNames = (order.documents || []).map(d => d.name || d.file_name || '').join(' ');
+            const documentDescriptions = (order.documents || []).map(d => d.description || '').join(' ');
 
             const searchFields = [
                 String(order.id || ''),          // ORDER ID — e.g. "42"
@@ -397,7 +401,9 @@ function applyFilters() {
                 order.building || '',
                 order.status || '',
                 order.quote_number || '',         // Quote number e.g. QT-2026-12345
-                fileNames                         // File names of attachments
+                fileNames,                        // File names of attachments
+                documentNames,                    // Linked document file names
+                documentDescriptions              // Linked document descriptions
             ].join(' ').toLowerCase();
 
             if (!searchFields.includes(term)) return false;
