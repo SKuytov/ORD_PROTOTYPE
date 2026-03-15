@@ -196,7 +196,8 @@ function renderDocumentCard(doc) {
     html += '<div class="document-actions">';
     html += `<button class="btn-icon" onclick="downloadDocument(${doc.id}, '${escapeHtml(doc.file_name)}')" title="Download">&#x2B07;</button>`;
     
-    if (currentUser && currentUser.role !== 'requester') {
+    // ⭐ SECURITY: Only admin can unlink (which may delete the document)
+    if (currentUser && currentUser.role === 'admin') {
         html += `<button class="btn-icon btn-danger" onclick="unlinkDocument(${doc.id})" title="Remove from this order">🗑</button>`;
     }
     
