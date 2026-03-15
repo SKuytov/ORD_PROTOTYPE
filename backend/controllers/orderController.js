@@ -100,13 +100,22 @@ exports.getOrders = async (req, res) => {
                            'type', f.file_type,
                            'size', f.file_size
                        )
-                   ) as files
+                   ) as files,
+                   GROUP_CONCAT(
+                       DISTINCT JSON_OBJECT(
+                           'id', d.id,
+                           'name', d.file_name,
+                           'description', IFNULL(d.description, '')
+                       )
+                   ) as documents
             FROM orders o
             LEFT JOIN order_files f ON o.id = f.order_id
             LEFT JOIN suppliers s ON o.supplier_id = s.id
             LEFT JOIN quotes q ON o.quote_ref = q.id
             LEFT JOIN cost_centers cc ON o.cost_center_id = cc.id
             LEFT JOIN users u_assigned ON o.assigned_to_user_id = u_assigned.id
+            LEFT JOIN order_documents_link odl ON o.id = odl.order_id
+            LEFT JOIN documents d ON odl.document_id = d.id
         `;
 
         const conditions = [];
@@ -151,9 +160,15 @@ exports.getOrders = async (req, res) => {
                 OR cc.name LIKE ?
                 OR CAST(o.id AS CHAR) LIKE ?
                 OR EXISTS (SELECT 1 FROM order_files f2 WHERE f2.order_id = o.id AND f2.file_name LIKE ?)
+                OR EXISTS (
+                    SELECT 1 FROM order_documents_link odl2
+                    INNER JOIN documents d2 ON odl2.document_id = d2.id
+                    WHERE odl2.order_id = o.id
+                    AND (d2.file_name LIKE ? OR d2.description LIKE ?)
+                )
                 ${idClause}
             )`);
-            params.push(s, s, s, s, s, s, s, s, s, s, s, s, ...idParam);
+            params.push(s, s, s, s, s, s, s, s, s, s, s, s, s, s, ...idParam);
         }
 
         if (conditions.length > 0) {
@@ -173,6 +188,16 @@ exports.getOrders = async (req, res) => {
                 } catch { order.files = []; }
             } else {
                 order.files = [];
+            }
+
+            // ⭐ NEW: Parse documents JSON (file_name + description for search)
+            if (order.documents && order.documents !== 'null') {
+                try {
+                    order.documents = JSON.parse(`[${order.documents}]`);
+                    order.documents = order.documents.filter(d => d.id !== null);
+                } catch { order.documents = []; }
+            } else {
+                order.documents = [];
             }
         });
 
