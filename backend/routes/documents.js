@@ -286,6 +286,11 @@ router.delete('/:documentId/unlink/:orderId', authenticateToken, async (req, res
     const connection = await pool.getConnection();
     
     try {
+        // ⭐ SECURITY: Only admin can unlink/delete documents
+        if (!req.user || req.user.role !== 'admin') {
+            return res.status(403).json({ success: false, message: 'Only admin users can delete or unlink documents' });
+        }
+
         const { documentId, orderId } = req.params;
 
         await connection.beginTransaction();
@@ -331,6 +336,11 @@ router.delete('/:documentId', authenticateToken, async (req, res) => {
     const connection = await pool.getConnection();
     
     try {
+        // ⭐ SECURITY: Only admin can delete documents
+        if (!req.user || req.user.role !== 'admin') {
+            return res.status(403).json({ success: false, message: 'Only admin users can delete documents' });
+        }
+
         const { documentId } = req.params;
 
         await connection.beginTransaction();
