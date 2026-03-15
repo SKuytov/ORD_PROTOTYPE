@@ -41,6 +41,44 @@ body {
     align-items: center;
 }
 
+/* Document type filter tabs */
+.doc-type-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 0.75rem;
+}
+.doc-type-tab {
+    padding: 0.2rem 0.6rem;
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    background: transparent;
+    cursor: pointer;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+.doc-type-tab.active {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+}
+.doc-type-count {
+    font-size: 0.7rem;
+    opacity: 0.75;
+}
+
+/* Document type badge on card */
+.doc-type-badge {
+    font-size: 0.7rem;
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    background: var(--badge-bg, #e9ecef);
+    color: var(--text-muted);
+    margin-right: 0.4rem;
+}
+
 /* Login */
 .login-container {
     max-width: 420px;
