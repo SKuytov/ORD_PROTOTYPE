@@ -39,6 +39,19 @@ export interface Order {
   minutes_since_activity?: number;
 }
 
+export interface Building {
+  id: number;
+  code: string;
+  name: string;
+  active: number;
+}
+
+export interface CostCenter {
+  id: number;
+  code: string;
+  name: string;
+}
+
 export interface OrderFilters {
   status?: string;
   building?: string;
@@ -50,6 +63,16 @@ export interface OrderFilters {
   sort?: 'id_asc' | 'id_desc' | 'date_asc' | 'date_desc' | 'priority' | 'due_date';
 }
 
+export async function getBuildings(): Promise<Building[]> {
+  const res = await apiClient.get<{ success: boolean; buildings: Building[] }>('/buildings?active=1');
+  return res.buildings || [];
+}
+
+export async function getCostCenters(): Promise<CostCenter[]> {
+  const res = await apiClient.get<{ success: boolean; cost_centers: CostCenter[] }>('/cost-centers');
+  return res.cost_centers || [];
+}
+
 export async function getOrders(filters: OrderFilters = {}): Promise<Order[]> {
   const params = new URLSearchParams();
   if (filters.status) params.set('status', filters.status);
@@ -57,15 +80,15 @@ export async function getOrders(filters: OrderFilters = {}): Promise<Order[]> {
   if (filters.priority) params.set('priority', filters.priority);
   if (filters.search) params.set('search', filters.search);
   if (filters.assigned_filter) params.set('assigned_filter', filters.assigned_filter);
-  
+
   const qs = params.toString();
   const res = await apiClient.get<{ success: boolean; orders: Order[] }>(
     `/orders${qs ? `?${qs}` : ''}`
   );
-  
+
   let orders = res.orders || [];
-  
-  // Client-side date range filter (backend doesn't support it natively)
+
+  // Client-side date range filter
   if (filters.date_from) {
     const from = new Date(filters.date_from);
     orders = orders.filter(o => new Date(o.submission_date) >= from);
@@ -75,38 +98,32 @@ export async function getOrders(filters: OrderFilters = {}): Promise<Order[]> {
     to.setHours(23, 59, 59, 999);
     orders = orders.filter(o => new Date(o.submission_date) <= to);
   }
-  
+
   // Client-side sorting
   switch (filters.sort) {
     case 'id_asc':
-      orders.sort((a, b) => a.id - b.id);
-      break;
+      orders.sort((a, b) => a.id - b.id); break;
     case 'id_desc':
-      orders.sort((a, b) => b.id - a.id);
-      break;
+      orders.sort((a, b) => b.id - a.id); break;
     case 'date_asc':
-      orders.sort((a, b) => new Date(a.submission_date).getTime() - new Date(b.submission_date).getTime());
-      break;
+      orders.sort((a, b) => new Date(a.submission_date).getTime() - new Date(b.submission_date).getTime()); break;
     case 'date_desc':
-      orders.sort((a, b) => new Date(b.submission_date).getTime() - new Date(a.submission_date).getTime());
-      break;
+      orders.sort((a, b) => new Date(b.submission_date).getTime() - new Date(a.submission_date).getTime()); break;
     case 'priority': {
       const p: Record<string, number> = { Critical: 0, High: 1, Normal: 2, Low: 3 };
-      orders.sort((a, b) => (p[a.priority] ?? 2) - (p[b.priority] ?? 2));
-      break;
+      orders.sort((a, b) => (p[a.priority] ?? 2) - (p[b.priority] ?? 2)); break;
     }
     case 'due_date':
       orders.sort((a, b) => {
         if (!a.date_needed) return 1;
         if (!b.date_needed) return -1;
         return new Date(a.date_needed).getTime() - new Date(b.date_needed).getTime();
-      });
-      break;
+      }); break;
     default:
-      // Default: newest first (submission_date desc) — already returned by backend
+      // Default: newest first (backend already returns this)
       break;
   }
-  
+
   return orders;
 }
 
@@ -115,7 +132,7 @@ export async function getOrderById(id: number): Promise<Order> {
   return res.order;
 }
 
-export async function createOrder(data: {
+export interface CreateOrderData {
   building: string;
   itemDescription: string;
   partNumber?: string;
@@ -127,28 +144,52 @@ export async function createOrder(data: {
   requester: string;
   requesterEmail?: string;
   costCenterId?: number;
-}): Promise<{ orderId: number }> {
-  const res = await apiClient.post<{ success: boolean; orderId: number }>('/orders', data);
+  files?: Array<{ uri: string; name: string; type: string }>;
+}
+
+export async function createOrder(data: CreateOrderData): Promise<{ orderId: number }> {
+  // Backend uses multer for file uploads — must send as multipart/form-data
+  const formData = new FormData();
+  formData.append('building', data.building);
+  formData.append('itemDescription', data.itemDescription);
+  formData.append('quantity', String(data.quantity));
+  formData.append('dateNeeded', data.dateNeeded);
+  formData.append('priority', data.priority);
+  formData.append('requester', data.requester);
+  if (data.partNumber) formData.append('partNumber', data.partNumber);
+  if (data.category) formData.append('category', data.category);
+  if (data.notes) formData.append('notes', data.notes);
+  if (data.requesterEmail) formData.append('requesterEmail', data.requesterEmail);
+  if (data.costCenterId) formData.append('costCenterId', String(data.costCenterId));
+
+  // Attach files if any
+  if (data.files && data.files.length > 0) {
+    data.files.forEach((file) => {
+      formData.append('files', {
+        uri: file.uri,
+        name: file.name,
+        type: file.type,
+      } as any);
+    });
+  }
+
+  const res = await apiClient.postForm<{ success: boolean; orderId: number }>('/orders', formData);
   return { orderId: res.orderId };
 }
 
-export async function updateOrderStatus(
-  id: number, 
-  status: string, 
-  notes?: string
-): Promise<void> {
+export async function updateOrderStatus(id: number, status: string, notes?: string): Promise<void> {
   await apiClient.put(`/orders/${id}`, { status, notes });
 }
 
-export async function getOrderStats(): Promise<{
-  totalOrders: number;
-  newOrders: number;
-  inProgress: number;
-  completed: number;
-  overdue: number;
-  byStatus: Record<string, number>;
-  byPriority: Record<string, number>;
-}> {
+export async function getOrderStats(): Promise<any> {
   const res = await apiClient.get<{ success: boolean; stats: any }>('/orders/stats/overview');
   return res.stats;
+}
+
+export async function getAutocomplete(q: string): Promise<string[]> {
+  if (q.length < 2) return [];
+  const res = await apiClient.get<{ success: boolean; suggestions: string[] }>(
+    `/autocomplete/item-description?q=${encodeURIComponent(q)}`
+  );
+  return res.suggestions?.slice(0, 6) ?? [];
 }

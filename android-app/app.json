@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "PartPulse Orders",
-    "slug": "partpulse-orders",
+    "name": "PartPulse",
+    "slug": "partpulse-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -10,35 +10,44 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0f172a"
+      "backgroundColor": "#2d3f5e"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0f172a"
+        "backgroundColor": "#2d3f5e"
       },
-      "package": "com.partpulse.orders",
+      "package": "com.partpulse.app",
       "versionCode": 1,
       "permissions": [
         "INTERNET",
         "ACCESS_NETWORK_STATE",
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
-        "CAMERA"
+        "CAMERA",
+        "READ_MEDIA_IMAGES",
+        "READ_MEDIA_VIDEO"
       ]
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.partpulse.orders"
+      "bundleIdentifier": "com.partpulse.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-router",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow PartPulse to attach photos to orders.",
+          "cameraPermission": "Allow PartPulse to take photos for orders."
+        }
+      ]
     ],
-    "scheme": "partpulse-orders",
+    "scheme": "partpulse-app",
     "extra": {
       "apiBaseUrl": "https://partpulse-orders.tail675c8b.ts.net/api"
     }

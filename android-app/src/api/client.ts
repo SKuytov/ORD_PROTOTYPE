@@ -19,16 +19,18 @@ async function request<T>(
   method: string,
   path: string,
   body?: unknown,
+  isFormData = false,
 ): Promise<T> {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
+  const headers: Record<string, string> = {};
   if (_token) headers['Authorization'] = `Bearer ${_token}`;
+  if (!isFormData && body) headers['Content-Type'] = 'application/json';
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method,
     headers,
-    body: body ? JSON.stringify(body) : undefined,
+    body: isFormData
+      ? (body as FormData)
+      : body ? JSON.stringify(body) : undefined,
   });
 
   if (!response.ok) {
@@ -50,6 +52,7 @@ async function request<T>(
 export const apiClient = {
   get: <T>(path: string) => request<T>('GET', path),
   post: <T>(path: string, body: unknown) => request<T>('POST', path, body),
+  postForm: <T>(path: string, formData: FormData) => request<T>('POST', path, formData, true),
   put: <T>(path: string, body: unknown) => request<T>('PUT', path, body),
   patch: <T>(path: string, body: unknown) => request<T>('PATCH', path, body),
   delete: <T>(path: string) => request<T>('DELETE', path),
